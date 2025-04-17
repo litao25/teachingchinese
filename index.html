@@ -16,8 +16,8 @@
         }
         
         #game-container {
-            width: 800px;
-            height: 1000px;
+            width: 500px;
+            height: 600px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -30,8 +30,8 @@
         }
         
         #grid-container {
-            width: 800px;
-            height: 400px;
+            width: 500px;
+            height: 250px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -250,8 +250,16 @@
             grid.style.gridTemplateRows = `repeat(${size}, 1fr)`;
             
             // 自动计算单元格和字体大小
-            const cellSize = Math.min(500 / size, 500 / size);
-           let fontSize;
+            let cellSize;
+               if (size === 3) {      // 3x3 网格
+                   cellSize = 200;    // 大格子
+               } else if (size === 5) { // 5x5 网格
+                  cellSize = 120;    // 中等格子
+               } else {               // 7x7 网格
+                  cellSize = 80;     // 小格子
+              }
+
+            let fontSize;
              if (size === 3) { // 3x3网格
                 fontSize = 50;
              } else if (size === 4) { // 4x4网格
