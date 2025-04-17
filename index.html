@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>숄츠 사각형 게임</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        #game-container {
+            width: 1000px;
+            height: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #grid-container {
+            width: 800px;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #grid {
+            display: grid;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e3f2fd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #1976d2;
+            transition:all 0.3s ease;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cell:hover {
+            background-color: #bbdefb;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .cell.clicked {
+            background-color: #64b5f6;
+            color: white;
+            transform: scale(0.95);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+          .cell.highlight {
+              transform: scale(1.1);
+              box-shadow: 0 0 15px rgba(0, 0, 255, 0.7);
+              z-index: 10;
+              transition:all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+              background-color: #64b5f6;
+              border: 2px solid #1976d2;
+          }
+        
+        #info-panel {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        #level-display {
+            font-size: 28px;
+            color: #0d47a1;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        #timer {
+            font-size: 32px;
+            color: #6a1b9a;
+            margin: 15px 0;
+            font-weight: bold;
+            height: 40px;
+        }
+        
+        #message {
+            font-size: 24px;
+            height: 30px;
+            color: #c2185b;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        #progress-container {
+            width: 70%;
+            height: 12px;
+            background-color: #e0e0e0;
+            border-radius: 6px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        #progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        
+        #final-time {
+            font-size: 36px;
+            color: #d32f2f;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+          @media (max-width: 768px) {
+                 .container {
+                   width: 100%;
+                   padding: 10px;
+                 }
+                /* 其他需要缩小的元素 */
+           }
+           @media (max-width: 480px) {
+                  .non-essential {
+                    display: none;
+                  }
+             }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="grid-container">
+            <div id="grid"></div>
+        </div>
+        
+        <div id="info-panel">
+            <div id="level-display">1단계: 3×3 그리드</div>
+            <div id="timer">시간: 0.00초</div>
+            <div id="message">1번을 클릭하여 시작하세요!</div>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+        
+        <div id="final-time"></div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const timerDisplay = document.getElementById('timer');
+        const messageDisplay = document.getElementById('message');
+        const levelDisplay = document.getElementById('level-display');
+        const progressBar = document.getElementById('progress-bar');
+        const finalTimeDisplay = document.getElementById('final-time');
+        
+        // 关卡配置
+        const levels = [
+            { size: 3, name: "1단계: 3×3 그리드" },
+            { size: 4, name: "2단계: 4×4 그리드" },
+            { size: 5, name: "3단계: 5×5 그리드" }
+        ];
+        
+        // 数字对应的拼音
+        const pinyin = [
+            "líng", "yī", "èr", "sān", "sì", "wǔ", "liù", "qī", "bā", "jiǔ",
+            "shí", "shíyī", "shí'èr", "shísān", "shísì", "shíwǔ", "shíliù", "shíqī", "shíbā", "shíjiǔ",
+            "èrshí", "èrshíyī", "èrshí'èr", "èrshísān", "èrshísì", "èrshíwǔ", "èrshíliù", "èrshíqī", "èrshíbā", "èrshíjiǔ",
+            "sānshí", "sānshíyī", "sānshí'èr", "sānshísān", "sānshísì", "sānshíwǔ", "sānshíliù", "sānshíqī", "sānshíbā", "sānshíjiǔ",
+            "sìshí", "sìshíyī", "sìshí'èr", "sìshísān", "sìshísì", "sìshíwǔ", "sìshíliù", "sìshíqī", "sìshíbā", "sìshíjiǔ",
+            "wǔshí"
+        ];
+        
+        // 韩语消息
+        const messages = {
+            start: "1번을 클릭하여 시작하세요!",
+            nextLevel: "잠시 후 다음 단계로 넘어갑니다...",
+            complete: "완료! 소요 시간: ",
+            finalComplete: "모든 단계 완료!"
+        };
+        
+        let currentLevel = 0;
+        let size = 3;
+        let numbers = [];
+        let currentNumber = 1;
+        let startTime = 0;
+        let totalTime = 0;
+        let timerInterval = null;
+        let gameStarted = false;
+        
+        // 初始化游戏
+        function initGame(level) {
+                // 清除可能存在的上一个高亮格子
+               if (lastHighlightedCell) {
+                   lastHighlightedCell.classList.remove('highlight');
+                }
+                lastHighlightedCell = null;
+
+            currentLevel = level;
+            size = levels[level].size;
+            gameStarted = false;
+            currentNumber = 1;
+            
+            // 更新显示
+            levelDisplay.textContent = levels[level].name;
+            messageDisplay.textContent = level === 0 ? messages.start : messages.nextLevel;
+            updateProgress(0);
+            finalTimeDisplay.style.display = 'none';
+            
+            // 创建数字数组并打乱顺序
+            numbers = [];
+            for (let i = 1; i <= size * size; i++) {
+                numbers.push(i);
+            }
+            shuffleArray(numbers);
+            
+            // 创建网格
+            createGrid();
+            
+            // 如果是下一关，2秒后清除消息
+            if (level > 0) {
+                setTimeout(() => {
+                    messageDisplay.textContent = "";
+                }, 2000);
+            }
+        }
+        
+        // 创建网格
+        function createGrid() {
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            grid.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+            
+            // 自动计算单元格和字体大小
+            const cellSize = Math.min(500 / size, 500 / size);
+           let fontSize;
+             if (size === 3) { // 3x3网格
+                fontSize = 50;
+             } else if (size === 4) { // 4x4网格
+                fontSize = 30;
+             } else { // 5x5网格
+                fontSize = 24;
+             }
+            
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = pinyin[numbers[i]];
+                cell.dataset.number = numbers[i];
+                cell.style.width = `${cellSize}px`;
+                cell.style.height = `${cellSize}px`;
+                cell.style.fontSize = `${fontSize}px`;
+                
+                cell.addEventListener('click', () => handleCellClick(cell));
+                grid.appendChild(cell);
+            }
+        }
+        
+        // 处理单元格点击
+       let lastHighlightedCell = null; // 保存上一个高亮的格子
+
+        function handleCellClick(cell) {
+              const number = parseInt(cell.dataset.number);
+    
+              // 如果游戏还没开始，开始计时
+              if (!gameStarted && number === 1) {
+                 startGame();
+                 gameStarted = true;
+                 messageDisplay.textContent = "";
+              }
+    
+             // 如果点击的是当前应该点击的数字
+             if (gameStarted && number === currentNumber) {
+                // 移除上一个格子的高亮
+               if (lastHighlightedCell) {
+                   lastHighlightedCell.classList.remove('highlight');
+               }
+        
+            // 添加当前格子的高亮
+           cell.classList.add('highlight');
+           lastHighlightedCell = cell;
+          
+            cell.classList.add('clicked');
+            currentNumber++;
+        
+            // 更新进度条
+            updateProgress((currentNumber - 1) / (size * size) * 100);
+        
+           // 如果完成了所有数字，关卡结束
+           if (currentNumber > size * size) {
+              // 移除最后一个格子的高亮
+              if (lastHighlightedCell) {
+                 lastHighlightedCell.classList.remove('highlight');
+              }
+              levelComplete();
+            }
+          }
+        }
+        
+        // 开始游戏
+        function startGame() {
+            startTime = performance.now();
+            timerInterval = setInterval(updateTimer, 10);
+        }
+        
+        // 关卡完成
+        function levelComplete() {
+            const endTime = performance.now();
+            const levelTime = (endTime - startTime) / 1000;
+            totalTime += levelTime;
+            clearInterval(timerInterval);
+            
+            // 如果是最后一关，游戏结束
+            if (currentLevel === levels.length - 1) {
+                grid.style.opacity = '0';
+                grid.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    grid.innerHTML = '';
+                    messageDisplay.textContent = messages.finalComplete;
+                    finalTimeDisplay.textContent = `총 소요 시간: ${totalTime.toFixed(2)}초`;
+                    finalTimeDisplay.style.display = 'block';
+                    progressBar.style.width = '100%';
+                }, 500);
+            } else {
+                // 否则进入下一关
+                messageDisplay.textContent = messages.complete + levelTime.toFixed(2) + "초";
+                grid.style.opacity = '0';
+                grid.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    initGame(currentLevel + 1);
+                    grid.style.opacity = '1';
+                    grid.style.transform = 'scale(1)';
+                }, 1000);
+            }
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            const currentTime = performance.now();
+            const timeElapsed = (currentTime - startTime) / 1000;
+            timerDisplay.textContent = "시간: " + timeElapsed.toFixed(2) + "초";
+        }
+        
+        // 更新进度条
+        function updateProgress(percent) {
+            progressBar.style.width = percent + '%';
+        }
+        
+        // 打乱数组顺序
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        
+        // 初始化第一关
+        initGame(0);
+    </script>
+</body>
+</html>
